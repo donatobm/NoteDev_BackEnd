@@ -2,7 +2,8 @@ import { Request, Response, NextFunction } from "express";
 import passport from "../configs/passport";
 import User from "../models/user";
 import AuthRequest from "../interfaces/authRequest.interface";
-import generateToken from "../utils/jwt";
+import { generateToken, decryptToken } from "../utils/jwt";
+
 
 const createUser = async (req: Request, res: Response, next: NextFunction) => {
   await passport.authenticate("signup", (err: any, user: any, info: any) => {
@@ -16,7 +17,11 @@ const createUser = async (req: Request, res: Response, next: NextFunction) => {
   })(req, res, next);
 };
 
-const loginUser = async (req: Request, res: Response, next: NextFunction) => {
+const loginUser = async (
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) => {
   await passport.authenticate("login", (err: any, user: any, info: any) => {
     if (err) {
       return res
@@ -33,6 +38,7 @@ const loginUser = async (req: Request, res: Response, next: NextFunction) => {
         }
         const body = { _id: user._id };
         const token = generateToken(body);
+        req.token = token;
         return res.json({ user: user, token });
       });
     } catch (error) {
@@ -42,10 +48,15 @@ const loginUser = async (req: Request, res: Response, next: NextFunction) => {
 };
 
 const deleteUser = async (req: Request, res: Response) => {
-  const { id } = req.params;
+  const token = req.headers.authorization?.split(" ")[1];
+  const payload: any = decryptToken(token);
   try {
-    await User.findByIdAndDelete(id);
-    return res.json({ message: "User deleted" });
+    const user = await User.findById(payload.user._id).exec();
+    if (!user) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    await User.findByIdAndDelete(payload.user._id).exec();
+    return res.json({ message: "User deleted", user });
   } catch (error) {
     return res
       .status(500)
@@ -54,23 +65,38 @@ const deleteUser = async (req: Request, res: Response) => {
 };
 
 const EditUser = async (req: AuthRequest, res: Response) => {
-  const { email, username } = req.body;
-  const { id } = req.params;
+  const { email, username, password } = req.body;
+  const token = req.headers.authorization?.split(" ")[1];
+  const payload: any = decryptToken(token);
   try {
-    const UserEmail = await User.findOne({ email: email }).exec();
-    if (UserEmail) {
-      return res.status(400).json({ message: "email already register" });
+    const currentUser: any = await User.findById(payload.user._id).exec();
+    if (!currentUser) {
+      return res.status(404).json({ message: "User not found" });
     }
-    const CurrentUser = await User.findById(req.user.id).exec();
-    if (CurrentUser.id !== id) {
-      return res.status(400).json({ message: "You can't edit this user" });
+    if (currentUser._id != payload.user._id) {
+      return res.status(401).json({
+        message: "You can't edit this user",
+        CurrentUser: currentUser._id,
+        payload: payload.user._id,
+      });
     }
-
-    const newUser = await User.findByIdAndUpdate(req.user.id).exec();
-    newUser.email = email;
-    newUser.username = username;
-    await newUser.save();
-    return res.json({ message: "User edited" });
+    if (currentUser.email != email) {
+      try {
+        const existingEmail = await User.findOne({ email: email }).exec();
+        if (existingEmail) {
+          return res.status(400).json({ message: "Email already exists" });
+        }
+      } catch (error) {
+        return res
+          .status(500)
+          .json({ message: "Internal server error", error: error });
+      }
+    }
+    currentUser.email = email;
+    currentUser.username = username;
+    currentUser.password = password;
+    await currentUser.save();
+    return res.json({ message: "User edited", currentUser });
   } catch (error) {
     return res
       .status(500)
@@ -79,6 +105,19 @@ const EditUser = async (req: AuthRequest, res: Response) => {
 };
 
 const test = async (req: AuthRequest, res: Response) => {
-  return res.json({ message: "test" });
+  const token = req.headers.authorization?.split(" ")[1];
+  try {
+    const userId: any = decryptToken(token);
+    const userFound = await User.findById(userId.user._id).exec();
+
+    return res.json({
+      message: "testing",
+      token: token,
+      user: userFound,
+      userId,
+    });
+  } catch (error) {
+    return res.status(404).json({ message: "User not found", error: error });
+  }
 };
-export { createUser, loginUser, test };
+export { createUser, loginUser, test, EditUser, deleteUser };
