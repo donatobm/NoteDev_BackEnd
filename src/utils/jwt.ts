@@ -10,4 +10,8 @@ const generateToken = (user: any) => {
   });
 };
 
-export default generateToken;
+const decryptToken = (token: string) => {
+  return jwt.verify(token, process.env.SECRET);
+};
+
+export { generateToken, decryptToken };
