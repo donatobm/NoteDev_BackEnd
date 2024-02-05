@@ -76,4 +76,57 @@ const deleteNote = async (req: Request, res: Response) => {
   }
 };
 
-export { test, createNote, editNote, deleteNote };
+const createCategory = async (req: Request, res: Response) => {
+  const { name } = req.body;
+  const token = req.headers.authorization?.split(" ")[1];
+  const payload: any = decryptToken(token);
+  try {
+    const searchUser = await User.findById(payload.user._id);
+    if (!searchUser) {
+      return res.status(404).json({ message: "User not found" });
+    }
+    const newCategory = await Category.create({
+      owner_id: payload.user._id,
+      name,
+    });
+    return res
+      .status(200)
+      .json({ message: "Category created", category: newCategory });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error", error });
+  }
+};
+
+const getNotes = async (req: Request, res: Response) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  const payload: any = decryptToken(token);
+  try {
+    const notes = await Note.find({ owner_id: payload.user._id })
+      .populate("category_id")
+      .exec();
+    return res.status(200).json({ notes });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error", error });
+  }
+};
+
+const getCategories = async (req: Request, res: Response) => {
+  const token = req.headers.authorization?.split(" ")[1];
+  const payload: any = decryptToken(token);
+  try {
+    const categories = await Category.find({ owner_id: payload.user._id });
+    return res.status(200).json({ categories });
+  } catch (error) {
+    return res.status(500).json({ message: "Internal server error", error });
+  }
+};
+
+export {
+  test,
+  createNote,
+  editNote,
+  deleteNote,
+  createCategory,
+  getNotes,
+  getCategories,
+};
