@@ -101,9 +101,7 @@ const getNotes = async (req: Request, res: Response) => {
   const token = req.headers.authorization?.split(" ")[1];
   const payload: any = decryptToken(token);
   try {
-    const notes = await Note.find({ owner_id: payload.user._id })
-      .populate("category_id")
-      .exec();
+    const notes = await Note.find({ owner_id: payload.user._id }).exec();
     return res.status(200).json({ notes });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error", error });
