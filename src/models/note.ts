@@ -25,11 +25,10 @@ const NoteSchema = new mongoose.Schema<NoteInterface>({
     required: false,
     default: false,
   },
-  category_id: {
+  category: {
     type: String,
     required: false,
     default: null,
-    ref: "Category",
   },
 });
 
