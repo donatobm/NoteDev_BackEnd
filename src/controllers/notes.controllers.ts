@@ -9,7 +9,7 @@ const test = async (req: Request, res: Response) => {
 };
 
 const createNote = async (req: Request, res: Response) => {
-  const { title, description, priority, favorite, category_id } = req.body;
+  const { title, description, priority, favorite, category } = req.body;
   const token = req.headers.authorization?.split(" ")[1];
   const payload: any = decryptToken(token);
   try {
@@ -23,7 +23,7 @@ const createNote = async (req: Request, res: Response) => {
       description,
       priority,
       favorite,
-      category_id,
+      category,
     });
     return res.status(200).json({ message: "Note created", note: newNote });
   } catch (error) {
