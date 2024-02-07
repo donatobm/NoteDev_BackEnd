@@ -124,15 +124,15 @@ const setFavorite = async (req: Request, res: Response) => {
   const token = req.headers.authorization?.split(" ")[1];
   const payload: any = decryptToken(token);
   try {
-    const searchNote = await Note.findById(note_id);
-    if (!searchNote) {
+    const note = await Note.findById(note_id);
+    if (!note) {
       return res.status(404).json({ message: "Note not found" });
     }
-    if (searchNote.owner_id !== payload.user._id) {
+    if (note.owner_id !== payload.user._id) {
       return res.status(401).json({ message: "You can't edit this note" });
     }
-    await Note.findByIdAndUpdate(note_id, { favorite: !searchNote.favorite });
-    return res.status(200).json({ message: "Note updated" });
+    await Note.findByIdAndUpdate(note_id, { favorite: !note.favorite });
+    return res.status(200).json({ message: "Note updated", note });
   } catch (error) {
     return res.status(500).json({ message: "Internal server error", error });
   }
