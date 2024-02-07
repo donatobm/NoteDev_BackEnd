@@ -26,7 +26,7 @@ const NoteSchema = new mongoose.Schema<NoteInterface>({
     default: false,
   },
   category: {
-    type: String,
+    type: [String],
     required: false,
     default: null,
   },
